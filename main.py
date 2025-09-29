@@ -2,6 +2,17 @@ import time
 import os
 import platform
 import sys
+import configparser
+
+def load_config(filename='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(filename)
+    interval = 20
+    message = "Встань, моргни и глянь вдаль. Глаза скажут спасибо."
+    if 'Settings' in config:
+        interval = config.getint('Settings', 'interval_minutes', fallback=20)
+        message = config.get('Settings', 'message', fallback=message)
+    return interval, message
 
 def init_notifier():
     system = platform.system()
@@ -25,12 +36,13 @@ def init_notifier():
     return notify
 
 def main():
-    notify = init_notifier()
-    print("Запущено напоминание по правилу 20-20-20. Нажмите Ctrl+C для выхода.")
+    interval, message = load_config()
+    print(f"Запущено напоминание по правилу 20-20-20 с интервалом {interval} минут. Нажмите Ctrl+C для выхода.")
     try:
+        notify = init_notifier()
         while True:
-            time.sleep(20 * 60)  # 20 минут
-            notify("Встань, моргни и глянь вдаль. Глаза скажут спасибо.")
+            time.sleep(interval * 60)
+            notify(message)
     except KeyboardInterrupt:
         print("\nПрограмма остановлена пользователем.")
 
