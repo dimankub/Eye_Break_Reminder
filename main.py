@@ -13,11 +13,11 @@ def init_notifier():
             os.system(f'notify-send "EyeCare" "{msg}"')
     elif system == "Windows":
         try:
-            from plyer import notification
+            from win11toast import toast
             def notify(msg):
-                notification.notify(title="EyeCare", message=msg, timeout=5)
+                toast("EyeCare", msg, duration="short")
         except ImportError:
-            print("Для работы уведомлений на Windows установите пакет plyer: pip install plyer")
+            print("Для работы уведомлений на Windows установите пакет win11toast: pip install win11toast")
             sys.exit(1)
     else:
         print(f"Неизвестная ОС: {system}. Уведомления не поддерживаются.")
