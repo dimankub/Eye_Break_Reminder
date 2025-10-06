@@ -36,7 +36,7 @@ message = Take a short eye break! Look away for a bit.
 Start the script:
 
 ```bash
-python eyecare.py
+python main.py
 ```
 Press Ctrl+C to stop the reminder.
 
