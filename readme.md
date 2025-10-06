@@ -22,9 +22,10 @@ pip install win11toast
 ## 🛠️ Configuration
 To customize, create or edit the config.ini in the same folder:
 
-`[Settings]`
-`interval_minutes = 20`
-`message = Take a short eye break! Look away for a bit.`
+```[Settings]
+interval_minutes = 20
+message = Take a short eye break! Look away for a bit.
+```
 
 
 ## 🚀 Usage
