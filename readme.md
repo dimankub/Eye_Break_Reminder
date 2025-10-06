@@ -19,12 +19,13 @@ Download or clone this repository.
 pip install win11toast
 ```
 
-🛠️ Configuration
+## 🛠️ Configuration
 To customize, create or edit the config.ini in the same folder:
-
+```bash
 [Settings]
 interval_minutes = 20
 message = Take a short eye break! Look away for a bit.
+```
 
 ## 🚀 Usage
 Start the script:
