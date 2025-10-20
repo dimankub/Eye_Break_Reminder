@@ -31,8 +31,15 @@ def init_notifier():
             def notify(msg):
                 toast("EyeCare", msg, duration="short")
         except ImportError:
-            print("Для работы уведомлений на Windows установите пакет win11toast: pip install win11toast")
-            sys.exit(1)
+            try:
+                from win10toast import ToastNotifier
+                _toaster = ToastNotifier()
+                def notify(msg):
+                    _toaster.show_toast("EyeCare", str(msg), duration=5)
+            except ImportError:
+                print("Уведомления Windows: установите win11toast или win10toast (pip install win11toast win10toast). Используется консольный режим.")
+                def notify(msg):
+                    print(f"[EyeCare] {msg}")
     else:
         print(f"Неизвестная ОС: {system}. Уведомления не поддерживаются.")
         sys.exit(1)
