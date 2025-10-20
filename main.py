@@ -3,6 +3,7 @@ import os
 import platform
 import sys
 import configparser
+import subprocess
 
 def load_config(filename='config.ini'):
     config = configparser.ConfigParser()
@@ -18,10 +19,12 @@ def init_notifier():
     system = platform.system()
     if system == "Darwin":
         def notify(msg):
-            os.system(f"osascript -e 'display notification \"{msg}\" with title \"EyeCare\"'")
+            safe_msg = str(msg).replace('"', '\\"').replace("\n", " ")
+            script = f'display notification "{safe_msg}" with title "EyeCare"'
+            subprocess.run(["osascript", "-e", script], check=False)
     elif system == "Linux":
         def notify(msg):
-            os.system(f'notify-send "EyeCare" "{msg}"')
+            subprocess.run(["notify-send", "EyeCare", str(msg)], check=False)
     elif system == "Windows":
         try:
             from win11toast import toast
