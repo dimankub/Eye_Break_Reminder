@@ -6,8 +6,16 @@ import configparser
 import subprocess
 
 def load_config(filename='config.ini'):
+    if not os.path.exists(filename):
+        config = configparser.ConfigParser()
+        config['Settings'] = {
+            'interval_minutes': '20',
+            'message': 'Встань, моргни и глянь вдаль. Глаза скажут спасибо.'
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            config.write(f)
     config = configparser.ConfigParser()
-    config.read(filename)
+    config.read(filename, encoding='utf-8')
     interval = 20
     message = "Встань, моргни и глянь вдаль. Глаза скажут спасибо."
     if 'Settings' in config:
