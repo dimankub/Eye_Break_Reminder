@@ -11,6 +11,8 @@ Native notifications for Windows, Linux, and macOS
 
 Lightweight and runs in the background
 
+Multiple message rotation, including random mode
+
 ## ⚙️ Installation
 Make sure Python 3.7+ is installed.
 
@@ -23,11 +25,12 @@ pip install win11toast
 ```
 
 ## 🛠️ Configuration
-To customize, create or edit the config.ini in the same folder:
+Edit the config.ini file in the same folder as the script (created on first run):
 
 ```
 [Settings]
 interval_minutes = 20
+message_mode = random # single | random
 message = Take a short eye break! Look away for a bit.
 ```
 
