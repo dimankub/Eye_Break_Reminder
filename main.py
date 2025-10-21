@@ -4,24 +4,46 @@ import platform
 import sys
 import configparser
 import subprocess
+import random
 
 def load_config(filename='config.ini'):
+    # Автосоздание конфига при первом запуске
     if not os.path.exists(filename):
         config = configparser.ConfigParser()
         config['Settings'] = {
             'interval_minutes': '20',
-            'message': 'Встань, моргни и глянь вдаль. Глаза скажут спасибо.'
+            'message_mode': 'single',
+            'message': 'Встань, моргни и глянь вдаль. Глаза скажут спасибо.',
+            'messages': '\n# Дополнительные сообщения:\n# Ещё немного — и глаза скажут спасибо!\n# Встань, потянись и посмотри вдаль.'
         }
         with open(filename, 'w', encoding='utf-8') as f:
             config.write(f)
+
     config = configparser.ConfigParser()
     config.read(filename, encoding='utf-8')
+
     interval = 20
-    message = "Встань, моргни и глянь вдаль. Глаза скажут спасибо."
+    messages = ["Встань, моргни и глянь вдаль. Глаза скажут спасибо."]
+    message_mode = 'single'
+
     if 'Settings' in config:
         interval = config.getint('Settings', 'interval_minutes', fallback=20)
-        message = config.get('Settings', 'message', fallback=message)
-    return interval, message
+        message_mode = config.get('Settings', 'message_mode', fallback='single').lower()
+
+        raw_messages = []
+        if config.has_option('Settings', 'messages'):
+            val = config.get('Settings', 'messages')
+            for line in val.splitlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    raw_messages.append(line)
+        # добавляем одиночное сообщение, если нет списка
+        if config.has_option('Settings', 'message'):
+            raw_messages.insert(0, config.get('Settings', 'message'))
+        if raw_messages:
+            messages = raw_messages
+
+    return interval, messages, message_mode
 
 def init_notifier():
     system = platform.system()
@@ -54,13 +76,21 @@ def init_notifier():
     return notify
 
 def main():
-    interval, message = load_config()
-    print(f"Запущено напоминание по правилу 20-20-20 с интервалом {interval} минут. Нажмите Ctrl+C для выхода.")
+    interval, messages, mode = load_config()
+    print(f"Запущено напоминание по правилу 20-20-20 с интервалом {interval} минут в режиме {mode}. Нажмите Ctrl+C для выхода.")
     try:
         notify = init_notifier()
+        idx = 0
         while True:
             time.sleep(interval * 60)
-            notify(message)
+            if len(messages) == 1:
+                msg = messages[0]
+            elif mode == 'random':
+                msg = random.choice(messages)
+            else:
+                msg = messages[idx % len(messages)]
+                idx += 1
+            notify(msg)
     except KeyboardInterrupt:
         print("\nПрограмма остановлена пользователем.")
 
