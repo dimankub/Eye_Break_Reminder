@@ -32,8 +32,22 @@ pip install win11toast
 ```
 [Settings]
 interval_minutes = 20
-message_mode = random # варианты: single | random
-message = Встань, моргни и глянь вдаль. Глаза скажут спасибо.
+message_mode = random
+lang = auto
+
+[Messages.ru]
+default = Встань, моргни и глянь вдаль. Глаза скажут спасибо.
+messages =
+Потянись и посмотри вдаль.
+Пройди пару шагов.
+Переведи взгляд на что-то дальнее.
+
+[Messages.en]
+default = Stand up, blink, and look into the distance.
+messages =
+Look 20 feet away for 20 seconds.
+Relax and stretch your eyes.
+Blink and refocus.
 ```
 
 🚀 Запуск
