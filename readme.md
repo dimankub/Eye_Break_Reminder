@@ -32,8 +32,22 @@ Edit the config.ini file in the same folder as the script (created on first run)
 ```
 [Settings]
 interval_minutes = 20
-message_mode = random # single | random
-message = Take a short eye break! Look away for a bit.
+message_mode = random
+lang = auto
+
+[Messages.en]
+default = Stand up, blink, and look into the distance.
+messages =
+Look 20 feet away for at least 20 seconds.
+Relax your eyes and stretch.
+Blink and refocus your eyes.
+
+[Messages.ru]
+default = Встань, моргни и глянь вдаль. Глаза скажут спасибо.
+messages =
+Потянись и посмотри вдаль.
+Пройди пару шагов.
+Переведи взгляд на что-то дальнее.
 ```
 
 
