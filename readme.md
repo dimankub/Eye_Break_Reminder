@@ -13,6 +13,8 @@ Lightweight and runs in the background
 
 Multiple message rotation, including random mode
 
+Built-in localization (English and Russian)
+
 ## ⚙️ Installation
 Make sure Python 3.7+ is installed.
 
