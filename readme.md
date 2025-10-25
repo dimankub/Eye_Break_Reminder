@@ -49,7 +49,14 @@ messages =
 Пройди пару шагов.
 Переведи взгляд на что-то дальнее.
 ```
-
+## Parameters
+- `interval_minutes`: time between notifications  
+- `message_mode`: how messages are selected  
+  - `single` — fixed message  
+  - `random` — random selection  
+  - (any other) — sequential rotation  
+- `lang`: language for notifications (`auto`, `en`, or `ru`)  
+  - `auto` detects system language 
 
 ## 🚀 Usage
 Start the script:
