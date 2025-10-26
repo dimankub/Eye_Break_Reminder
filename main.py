@@ -7,6 +7,9 @@ import configparser
 import subprocess
 import argparse
 import locale
+import threading
+from PIL import Image, ImageDraw
+import pystray
 
 def load_config(filename='config.ini'):
     # Автосоздание базового конфига с секциями сообщений
@@ -93,20 +96,107 @@ def init_notifier():
             print(f"[EyeCare] {msg}")
     return notify
 
+def create_tray_icon():
+    """Создает простую иконку для системного трея"""
+    # Создаем изображение 64x64 с прозрачным фоном
+    image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    
+    # Рисуем простую иконку глаза
+    # Внешний круг (глаз)
+    draw.ellipse([8, 16, 56, 48], fill=(100, 150, 200, 255), outline=(50, 100, 150, 255), width=2)
+    # Внутренний круг (зрачок)
+    draw.ellipse([24, 28, 40, 36], fill=(50, 50, 50, 255))
+    # Блик
+    draw.ellipse([28, 30, 32, 32], fill=(255, 255, 255, 255))
+    
+    return image
+
+class TrayManager:
+    def __init__(self, notify_func, messages, mode, lang):
+        self.notify = notify_func
+        self.messages = messages
+        self.mode = mode
+        self.lang = lang
+        self.idx = 0
+        self.paused = False
+        self.running = True
+        
+        # Создаем меню трея
+        self.menu = pystray.Menu(
+            pystray.MenuItem("Pause" if lang == 'en' else "Пауза", self.toggle_pause),
+            pystray.MenuItem("Check now" if lang == 'en' else "Проверить сейчас", self.check_now),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Exit" if lang == 'en' else "Выход", self.quit_app)
+        )
+        
+        # Создаем иконку трея
+        self.icon = pystray.Icon(
+            "EyeCare",
+            create_tray_icon(),
+            "EyeCare Reminder",
+            self.menu
+        )
+    
+    def toggle_pause(self, icon=None, item=None):
+        """Переключает состояние паузы"""
+        self.paused = not self.paused
+        status = "Paused" if self.lang == 'en' else "Приостановлено"
+        if not self.paused:
+            status = "Resumed" if self.lang == 'en' else "Возобновлено"
+        self.notify(status)
+    
+    def check_now(self, icon=None, item=None):
+        """Показывает уведомление немедленно"""
+        msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
+        self.idx += 1
+        self.notify(msg)
+    
+    def quit_app(self, icon=None, item=None):
+        """Выход из приложения"""
+        self.running = False
+        self.icon.stop()
+    
+    def run(self):
+        """Запускает трей в отдельном потоке"""
+        self.icon.run()
+    
+    def start_timer_thread(self):
+        """Запускает основной таймер в отдельном потоке"""
+        def timer_loop():
+            interval, _, _, _ = load_config()
+            while self.running:
+                if not self.paused:
+                    time.sleep(interval * 60)
+                    if self.running and not self.paused:
+                        msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
+                        self.idx += 1
+                        self.notify(msg)
+                else:
+                    time.sleep(1)  # Короткий сон при паузе
+        
+        timer_thread = threading.Thread(target=timer_loop, daemon=True)
+        timer_thread.start()
+        return timer_thread
+
 def main():
     interval, messages, mode, lang = load_config()
     print(f"Запущено напоминание (язык: {lang}) с интервалом {interval} мин, режим: {mode}")
     notify = init_notifier()
-    idx = 0
-
+    
+    # Создаем менеджер системного трея
+    tray_manager = TrayManager(notify, messages, mode, lang)
+    
+    # Запускаем таймер в отдельном потоке
+    timer_thread = tray_manager.start_timer_thread()
+    
     try:
-        while True:
-            time.sleep(interval * 60)
-            msg = random.choice(messages) if mode == 'random' else messages[idx % len(messages)]
-            idx += 1
-            notify(msg)
+        # Запускаем системный трей (блокирующий вызов)
+        tray_manager.run()
     except KeyboardInterrupt:
         print("\nEyeCare остановлен пользователем.")
+    finally:
+        tray_manager.running = False
 
 if __name__ == "__main__":
     main()
