@@ -9,6 +9,8 @@ Adjustable reminder interval and custom message via config.ini
 
 Native notifications for Windows, Linux, and macOS
 
+System tray integration with pause/test/quit menu
+
 Lightweight and runs in the background
 
 Multiple message rotation, including random mode
@@ -20,10 +22,15 @@ Make sure Python 3.7+ is installed.
 
 Download or clone this repository.
 
-(Windows only) Install the notification library:
+Install the required dependencies:
 
 ```bash
-pip install win11toast
+pip install -r requirements.txt
+```
+
+Or install manually:
+```bash
+pip install win11toast pystray Pillow
 ```
 
 ## 🛠️ Configuration
@@ -64,7 +71,14 @@ Start the script:
 ```bash
 python main.py
 ```
-Press Ctrl+C to stop the reminder.
+
+The application will run in the background with a system tray icon. Right-click the tray icon to access the menu:
+
+- **Pause/Resume**: Temporarily stop or resume reminders
+- **Check now**: Trigger an immediate reminder
+- **Exit**: Close the application
+
+Press Ctrl+C in the terminal to stop the reminder.
 
 ## 🔔 Example Notification
 💡 Take a short eye break! Look away for a bit.
