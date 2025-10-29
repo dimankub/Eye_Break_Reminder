@@ -1,2 +1,4 @@
 win11toast==0.36.2
 win10toast>=0.9
+pystray>=0.19.4
+Pillow>=8.0.0
