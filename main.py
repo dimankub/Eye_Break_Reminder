@@ -8,6 +8,7 @@ import subprocess
 import argparse
 import locale
 import threading
+import signal
 from PIL import Image, ImageDraw
 import pystray
 
@@ -157,6 +158,17 @@ class TrayManager:
         self.running = False
         self.icon.stop()
     
+    def shutdown(self):
+        """Корректное завершение: останавливает цикл и трей, безопасно и идемпотентно"""
+        if self.running:
+            self.running = False
+        try:
+            if hasattr(self, 'icon') and self.icon is not None:
+                self.icon.stop()
+        except Exception:
+            # Игнорируем ошибки остановки иконки (например, если уже остановлена)
+            pass
+    
     def run(self):
         """Запускает трей в отдельном потоке"""
         self.icon.run()
@@ -190,13 +202,35 @@ def main():
     # Запускаем таймер в отдельном потоке
     timer_thread = tray_manager.start_timer_thread()
     
+    # Единая функция очистки ресурсов и завершения
+    def cleanup():
+        tray_manager.shutdown()
+
+    # Обработчики сигналов для корректного завершения (SIGINT/SIGTERM)
+    def handle_termination(signum, frame):
+        reason = {
+            getattr(signal, 'SIGINT', None): 'SIGINT',
+            getattr(signal, 'SIGTERM', None): 'SIGTERM'
+        }.get(signum, str(signum))
+        print(f"\nПолучен сигнал {reason}. Завершаем...")
+        cleanup()
+    
     try:
         # Запускаем системный трей (блокирующий вызов)
+        # Регистрируем обработчики перед запуском цикла трея
+        try:
+            signal.signal(signal.SIGINT, handle_termination)
+        except Exception:
+            pass
+        try:
+            signal.signal(signal.SIGTERM, handle_termination)
+        except Exception:
+            pass
         tray_manager.run()
     except KeyboardInterrupt:
         print("\nEyeCare остановлен пользователем.")
     finally:
-        tray_manager.running = False
+        cleanup()
 
 if __name__ == "__main__":
     main()
