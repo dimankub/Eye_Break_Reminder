@@ -42,28 +42,28 @@ interval_minutes = 20
 message_mode = random
 lang = auto
 
-[Messages.en]
-default = Stand up, blink, and look into the distance.
-messages =
-Look 20 feet away for at least 20 seconds.
-Relax your eyes and stretch.
-Blink and refocus your eyes.
-
 [Messages.ru]
 default = Встань, моргни и глянь вдаль. Глаза скажут спасибо.
 messages =
-Потянись и посмотри вдаль.
-Пройди пару шагов.
-Переведи взгляд на что-то дальнее.
+    Посмотри вдаль и моргни пару раз.
+    Потянись, дай глазам отдохнуть.
+    Переведи взгляд на что-то дальнее.
+
+[Messages.en]
+default = Stand up, blink, and look into the distance. Your eyes will thank you.
+messages =
+    Look away from the screen for 20 seconds.
+    Stretch a bit and rest your eyes.
+    Blink a few times and refocus.
 ```
 ## Parameters
-- `interval_minutes`: time between notifications  
-- `message_mode`: how messages are selected  
-  - `single` — fixed message  
-  - `random` — random selection  
-  - (any other) — sequential rotation  
-- `lang`: language for notifications (`auto`, `en`, or `ru`)  
-  - `auto` detects system language 
+- `interval_minutes`: time between notifications (in minutes)
+- `message_mode`: how messages are selected
+  - `single` — fixed message
+  - `random` — random selection
+  - (any other) — sequential rotation
+- `lang`: language for notifications (`auto`, `en`, or `ru`)
+  - `auto` detects system language automatically 
 
 ## 🚀 Usage
 Start the script:
@@ -78,7 +78,7 @@ The application will run in the background with a system tray icon. Right-click 
 - **Check now**: Trigger an immediate reminder
 - **Exit**: Close the application
 
-Press Ctrl+C in the terminal to stop the reminder.
+You can also stop the application by pressing Ctrl+C in the terminal or using the Exit option in the tray menu.
 
 ## 🔔 Example Notification
-💡 Take a short eye break! Look away for a bit.
+💡 Stand up, blink, and look into the distance. Your eyes will thank you.
