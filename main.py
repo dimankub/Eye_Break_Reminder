@@ -9,12 +9,23 @@ import argparse
 import locale
 import threading
 import signal
+import logging
 from PIL import Image, ImageDraw
 import pystray
 
-def load_config(filename='config.ini'):
+def setup_logging(verbose=False):
+    """Настройка логирования с уровнями INFO/DEBUG"""
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+def load_config(filename='config.ini', lang_override=None):
     # Автосоздание базового конфига с секциями сообщений
     if not os.path.exists(filename):
+        logging.info(f"Создание нового конфигурационного файла: {filename}")
         with open(filename, 'w', encoding='utf-8') as f:
             f.write('[Settings]\n')
             f.write('interval_minutes = 20\n')
@@ -41,11 +52,7 @@ def load_config(filename='config.ini'):
     lang_setting = config.get('Settings', 'lang', fallback='auto')
 
     # Выбор языка: аргумент > конфиг > язык системы
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--lang', type=str, help='Language override (e.g., ru, en)')
-    args, _ = parser.parse_known_args()
-
-    lang = args.lang or lang_setting
+    lang = lang_override or lang_setting
     if lang == 'auto':
         sys_lang = locale.getdefaultlocale()[0]
         lang = 'ru' if sys_lang and sys_lang.startswith('ru') else 'en'
@@ -67,34 +74,67 @@ def load_config(filename='config.ini'):
     else:
         messages.insert(0, default_msg)
 
+    logging.debug(f"Загружена конфигурация: интервал={interval} мин, режим={mode}, язык={lang}, сообщений={len(messages)}")
     return interval, messages, mode, lang
 
 def init_notifier():
     system = platform.system()
+    logging.debug(f"Инициализация нотификатора для системы: {system}")
+    
     if system == "Darwin":
+        logging.info("Использование osascript для macOS уведомлений")
         def notify(msg):
             safe_msg = str(msg).replace('"', '\\"').replace("\n", " ")
-            subprocess.run(["osascript", "-e", f'display notification "{safe_msg}" with title "EyeCare"'])
+            logging.debug(f"Отправка уведомления через osascript: {msg[:50]}...")
+            try:
+                subprocess.run(["osascript", "-e", f'display notification "{safe_msg}" with title "EyeCare"'], check=True)
+                logging.debug("Уведомление успешно отправлено")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Ошибка при отправке уведомления через osascript: {e}")
     elif system == "Linux":
+        logging.info("Использование notify-send для Linux уведомлений")
         def notify(msg):
-            subprocess.run(["notify-send", "EyeCare", str(msg)])
+            logging.debug(f"Отправка уведомления через notify-send: {msg[:50]}...")
+            try:
+                subprocess.run(["notify-send", "EyeCare", str(msg)], check=True)
+                logging.debug("Уведомление успешно отправлено")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Ошибка при отправке уведомления через notify-send: {e}")
+            except FileNotFoundError:
+                logging.error("notify-send не найден. Убедитесь, что установлен libnotify-bin")
     elif system == "Windows":
         try:
             from win11toast import toast
+            logging.info("Использование win11toast для Windows уведомлений")
             def notify(msg):
-                toast("EyeCare", msg)
+                logging.debug(f"Отправка уведомления через win11toast: {msg[:50]}...")
+                try:
+                    toast("EyeCare", msg)
+                    logging.debug("Уведомление успешно отправлено")
+                except Exception as e:
+                    logging.error(f"Ошибка при отправке уведомления через win11toast: {e}")
         except ImportError:
             try:
                 from win10toast import ToastNotifier
+                logging.info("Использование win10toast для Windows уведомлений")
                 toaster = ToastNotifier()
                 def notify(msg):
-                    toaster.show_toast("EyeCare", str(msg), duration=5)
+                    logging.debug(f"Отправка уведомления через win10toast: {msg[:50]}...")
+                    try:
+                        toaster.show_toast("EyeCare", str(msg), duration=5)
+                        logging.debug("Уведомление успешно отправлено")
+                    except Exception as e:
+                        logging.error(f"Ошибка при отправке уведомления через win10toast: {e}")
             except ImportError:
+                logging.warning("Библиотеки win11toast и win10toast не найдены, используется консольный вывод")
                 def notify(msg):
                     print(f"[EyeCare] {msg}")
+                    logging.debug(f"Вывод в консоль (fallback): {msg}")
     else:
+        logging.warning(f"Неизвестная система {system}, используется консольный вывод")
         def notify(msg):
             print(f"[EyeCare] {msg}")
+            logging.debug(f"Вывод в консоль (fallback): {msg}")
     return notify
 
 def create_tray_icon():
@@ -145,65 +185,88 @@ class TrayManager:
         status = "Paused" if self.lang == 'en' else "Приостановлено"
         if not self.paused:
             status = "Resumed" if self.lang == 'en' else "Возобновлено"
+        logging.info(f"Пауза {'включена' if self.paused else 'выключена'}")
         self.notify(status)
     
     def check_now(self, icon=None, item=None):
         """Показывает уведомление немедленно"""
         msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
         self.idx += 1
+        logging.info(f"Ручная проверка: отправка уведомления")
         self.notify(msg)
     
     def quit_app(self, icon=None, item=None):
         """Выход из приложения"""
+        logging.info("Завершение работы по запросу пользователя")
         self.running = False
         self.icon.stop()
     
     def shutdown(self):
         """Корректное завершение: останавливает цикл и трей, безопасно и идемпотентно"""
+        logging.debug("Начало процедуры завершения работы")
         if self.running:
             self.running = False
         try:
             if hasattr(self, 'icon') and self.icon is not None:
                 self.icon.stop()
-        except Exception:
+                logging.debug("Иконка трея остановлена")
+        except Exception as e:
             # Игнорируем ошибки остановки иконки (например, если уже остановлена)
-            pass
+            logging.debug(f"Ошибка при остановке иконки (игнорируется): {e}")
     
     def run(self):
         """Запускает трей в отдельном потоке"""
         self.icon.run()
     
-    def start_timer_thread(self):
+    def start_timer_thread(self, interval):
         """Запускает основной таймер в отдельном потоке"""
         def timer_loop():
-            interval, _, _, _ = load_config()
+            logging.info(f"Таймер запущен с интервалом {interval} минут")
             while self.running:
                 if not self.paused:
+                    logging.debug(f"Ожидание {interval} минут до следующего уведомления...")
                     time.sleep(interval * 60)
                     if self.running and not self.paused:
                         msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
                         self.idx += 1
+                        logging.info(f"Автоматическое уведомление (сообщение #{self.idx}): {msg[:50]}...")
                         self.notify(msg)
                 else:
                     time.sleep(1)  # Короткий сон при паузе
         
         timer_thread = threading.Thread(target=timer_loop, daemon=True)
         timer_thread.start()
+        logging.debug("Поток таймера запущен")
         return timer_thread
 
 def main():
-    interval, messages, mode, lang = load_config()
-    print(f"Запущено напоминание (язык: {lang}) с интервалом {interval} мин, режим: {mode}")
+    # Парсинг аргументов командной строки
+    parser = argparse.ArgumentParser(description='EyeCare Reminder - напоминания для здоровья глаз')
+    parser.add_argument('--lang', type=str, help='Язык интерфейса (ru, en, auto)')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Подробное логирование (DEBUG уровень)')
+    args = parser.parse_args()
+    
+    # Настройка логирования
+    setup_logging(verbose=args.verbose)
+    logging.info("=" * 50)
+    logging.info("Запуск EyeCare Reminder")
+    logging.info("=" * 50)
+    
+    interval, messages, mode, lang = load_config(lang_override=args.lang)
+    logging.info(f"Конфигурация загружена: язык={lang}, интервал={interval} мин, режим={mode}, сообщений={len(messages)}")
+    
     notify = init_notifier()
     
     # Создаем менеджер системного трея
+    logging.info("Инициализация менеджера системного трея")
     tray_manager = TrayManager(notify, messages, mode, lang)
     
     # Запускаем таймер в отдельном потоке
-    timer_thread = tray_manager.start_timer_thread()
+    timer_thread = tray_manager.start_timer_thread(interval)
     
     # Единая функция очистки ресурсов и завершения
     def cleanup():
+        logging.info("Очистка ресурсов и завершение работы")
         tray_manager.shutdown()
 
     # Обработчики сигналов для корректного завершения (SIGINT/SIGTERM)
@@ -212,25 +275,31 @@ def main():
             getattr(signal, 'SIGINT', None): 'SIGINT',
             getattr(signal, 'SIGTERM', None): 'SIGTERM'
         }.get(signum, str(signum))
-        print(f"\nПолучен сигнал {reason}. Завершаем...")
+        logging.info(f"Получен сигнал {reason}. Завершаем работу...")
         cleanup()
     
     try:
         # Запускаем системный трей (блокирующий вызов)
         # Регистрируем обработчики перед запуском цикла трея
+        logging.info("Регистрация обработчиков сигналов")
         try:
             signal.signal(signal.SIGINT, handle_termination)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Не удалось зарегистрировать SIGINT (возможно, Windows): {e}")
         try:
             signal.signal(signal.SIGTERM, handle_termination)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Не удалось зарегистрировать SIGTERM (возможно, Windows): {e}")
+        
+        logging.info("Запуск системного трея (приложение работает в фоновом режиме)")
         tray_manager.run()
     except KeyboardInterrupt:
-        print("\nEyeCare остановлен пользователем.")
+        logging.info("EyeCare остановлен пользователем (KeyboardInterrupt)")
+    except Exception as e:
+        logging.error(f"Критическая ошибка: {e}", exc_info=True)
     finally:
         cleanup()
+        logging.info("EyeCare завершил работу")
 
 if __name__ == "__main__":
     main()
