@@ -167,9 +167,36 @@ def load_config(filename='config.ini', lang_override=None):
     config = configparser.ConfigParser()
     config.read(filename, encoding='utf-8')
 
-    interval = config.getint('Settings', 'interval_minutes', fallback=20)
-    mode = config.get('Settings', 'message_mode', fallback='random')
-    lang_setting = config.get('Settings', 'lang', fallback='auto')
+    # Валидация и нормализация интервала
+    try:
+        interval = config.getint('Settings', 'interval_minutes', fallback=20)
+        if interval <= 0:
+            logging.warning(f"Invalid interval_minutes value: {interval}. Using default: 20")
+            interval = 20
+        if interval > 1440:  # Максимум 24 часа
+            logging.warning(f"Interval too large: {interval} minutes. Capping at 1440 minutes")
+            interval = 1440
+    except (ValueError, TypeError) as e:
+        logging.error(f"Error reading interval_minutes: {e}. Using default: 20")
+        interval = 20
+    
+    # Валидация режима сообщений
+    mode = config.get('Settings', 'message_mode', fallback='random').strip().lower()
+    valid_modes = ['random', 'sequential', 'single']
+    if mode not in valid_modes:
+        # Если режим некорректный, но не пустой, используем его как 'sequential'
+        if mode:
+            logging.warning(f"Unknown message_mode '{mode}'. Valid modes: {valid_modes}. Using 'sequential'")
+            mode = 'sequential'
+        else:
+            mode = 'random'
+    
+    # Валидация языка
+    lang_setting = config.get('Settings', 'lang', fallback='auto').strip().lower()
+    valid_langs = ['auto', 'ru', 'en']
+    if lang_setting not in valid_langs:
+        logging.warning(f"Unknown lang '{lang_setting}'. Valid values: {valid_langs}. Using 'auto'")
+        lang_setting = 'auto'
 
     # Выбор языка: аргумент > конфиг > язык системы
     lang = lang_override or lang_setting
