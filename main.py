@@ -13,6 +13,14 @@ import logging
 from PIL import Image, ImageDraw
 import pystray
 
+# Константы
+DEFAULT_INTERVAL = 20  # Интервал по умолчанию в минутах
+MAX_INTERVAL = 1440  # Максимальный интервал (24 часа)
+MIN_INTERVAL = 1  # Минимальный интервал в минутах
+SUPPORTED_LANGUAGES = ['auto', 'ru', 'en']
+VALID_MESSAGE_MODES = ['random', 'sequential', 'single']
+NOTIFICATION_TIMEOUT = 5  # Таймаут для отправки уведомлений в секундах
+
 # Словари локализации для логирования
 LOG_MESSAGES = {
     'ru': {
@@ -134,8 +142,8 @@ def get_language(lang_override=None, filename='config.ini'):
     if os.path.exists(filename):
         config = configparser.ConfigParser()
         config.read(filename, encoding='utf-8')
-        lang_setting = config.get('Settings', 'lang', fallback='auto')
-        if lang_setting != 'auto':
+        lang_setting = config.get('Settings', 'lang', fallback=SUPPORTED_LANGUAGES[0])
+        if lang_setting != SUPPORTED_LANGUAGES[0]:
             return lang_setting
     
     # Автоопределение по системной локали
@@ -148,9 +156,9 @@ def load_config(filename='config.ini', lang_override=None):
         logging.info(_log('config_created', filename=filename))
         with open(filename, 'w', encoding='utf-8') as f:
             f.write('[Settings]\n')
-            f.write('interval_minutes = 20\n')
-            f.write('message_mode = random\n')
-            f.write('lang = auto\n\n')
+            f.write(f'interval_minutes = {DEFAULT_INTERVAL}\n')
+            f.write(f'message_mode = {VALID_MESSAGE_MODES[0]}\n')
+            f.write(f'lang = {SUPPORTED_LANGUAGES[0]}\n\n')
             f.write('[Messages.ru]\n')
             f.write('default = Встань, моргни и глянь вдаль. Глаза скажут спасибо.\n')
             f.write('messages =\n')
@@ -169,38 +177,36 @@ def load_config(filename='config.ini', lang_override=None):
 
     # Валидация и нормализация интервала
     try:
-        interval = config.getint('Settings', 'interval_minutes', fallback=20)
-        if interval <= 0:
-            logging.warning(f"Invalid interval_minutes value: {interval}. Using default: 20")
-            interval = 20
-        if interval > 1440:  # Максимум 24 часа
-            logging.warning(f"Interval too large: {interval} minutes. Capping at 1440 minutes")
-            interval = 1440
+        interval = config.getint('Settings', 'interval_minutes', fallback=DEFAULT_INTERVAL)
+        if interval < MIN_INTERVAL:
+            logging.warning(f"Invalid interval_minutes value: {interval}. Using default: {DEFAULT_INTERVAL}")
+            interval = DEFAULT_INTERVAL
+        if interval > MAX_INTERVAL:  # Максимум 24 часа
+            logging.warning(f"Interval too large: {interval} minutes. Capping at {MAX_INTERVAL} minutes")
+            interval = MAX_INTERVAL
     except (ValueError, TypeError) as e:
-        logging.error(f"Error reading interval_minutes: {e}. Using default: 20")
-        interval = 20
+        logging.error(f"Error reading interval_minutes: {e}. Using default: {DEFAULT_INTERVAL}")
+        interval = DEFAULT_INTERVAL
     
     # Валидация режима сообщений
-    mode = config.get('Settings', 'message_mode', fallback='random').strip().lower()
-    valid_modes = ['random', 'sequential', 'single']
-    if mode not in valid_modes:
+    mode = config.get('Settings', 'message_mode', fallback=VALID_MESSAGE_MODES[0]).strip().lower()
+    if mode not in VALID_MESSAGE_MODES:
         # Если режим некорректный, но не пустой, используем его как 'sequential'
         if mode:
-            logging.warning(f"Unknown message_mode '{mode}'. Valid modes: {valid_modes}. Using 'sequential'")
+            logging.warning(f"Unknown message_mode '{mode}'. Valid modes: {VALID_MESSAGE_MODES}. Using 'sequential'")
             mode = 'sequential'
         else:
-            mode = 'random'
+            mode = VALID_MESSAGE_MODES[0]
     
     # Валидация языка
-    lang_setting = config.get('Settings', 'lang', fallback='auto').strip().lower()
-    valid_langs = ['auto', 'ru', 'en']
-    if lang_setting not in valid_langs:
-        logging.warning(f"Unknown lang '{lang_setting}'. Valid values: {valid_langs}. Using 'auto'")
-        lang_setting = 'auto'
+    lang_setting = config.get('Settings', 'lang', fallback=SUPPORTED_LANGUAGES[0]).strip().lower()
+    if lang_setting not in SUPPORTED_LANGUAGES:
+        logging.warning(f"Unknown lang '{lang_setting}'. Valid values: {SUPPORTED_LANGUAGES}. Using '{SUPPORTED_LANGUAGES[0]}'")
+        lang_setting = SUPPORTED_LANGUAGES[0]
 
     # Выбор языка: аргумент > конфиг > язык системы
     lang = lang_override or lang_setting
-    if lang == 'auto':
+    if lang == SUPPORTED_LANGUAGES[0]:  # 'auto'
         sys_lang = locale.getdefaultlocale()[0]
         lang = 'ru' if sys_lang and sys_lang.startswith('ru') else 'en'
 
@@ -268,7 +274,7 @@ def init_notifier():
                 def notify(msg):
                     logging.debug(_log('notification_sending_win10', msg=msg[:50]))
                     try:
-                        toaster.show_toast("EyeCare", str(msg), duration=5)
+                        toaster.show_toast("EyeCare", str(msg), duration=NOTIFICATION_TIMEOUT)
                         logging.debug(_log('notification_sent'))
                     except Exception as e:
                         logging.error(_log('notify_error_win10', error=e))
