@@ -315,11 +315,27 @@ class TrayManager:
         self.idx = 0
         self.paused = False
         self.running = True
+        self.interval_minutes = None  # будет присвоено в start_timer_thread
+        self._seconds_left = None
+        self._lock = threading.Lock()
         
+        # Подменю выбора интервала
+        preset_intervals = [10, 15, 20, 30, 45, 60]
+        def make_interval_item(minutes):
+            label = f"{minutes} min" if self.lang == 'en' else f"{minutes} мин"
+            def on_select(icon, item):
+                self.set_interval(minutes)
+            def is_checked(item):
+                return self.interval_minutes == minutes
+            return pystray.MenuItem(label, on_select, checked=is_checked)
+
+        interval_submenu = pystray.Menu(*[make_interval_item(m) for m in preset_intervals])
+
         # Создаем меню трея
         self.menu = pystray.Menu(
             pystray.MenuItem("Pause" if lang == 'en' else "Пауза", self.toggle_pause),
             pystray.MenuItem("Check now" if lang == 'en' else "Проверить сейчас", self.check_now),
+            pystray.MenuItem("Interval" if lang == 'en' else "Интервал", interval_submenu),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Exit" if lang == 'en' else "Выход", self.quit_app)
         )
@@ -353,6 +369,34 @@ class TrayManager:
         logging.info(_log('quitting'))
         self.running = False
         self.icon.stop()
+
+    def set_interval(self, minutes):
+        """Устанавливает новый интервал (в минутах), сохраняет в конфиг и сбрасывает таймер"""
+        try:
+            minutes = int(minutes)
+        except Exception:
+            return
+        if minutes < MIN_INTERVAL:
+            minutes = MIN_INTERVAL
+        if minutes > MAX_INTERVAL:
+            minutes = MAX_INTERVAL
+        with self._lock:
+            self.interval_minutes = minutes
+            self._seconds_left = minutes * 60
+        # Сохраняем в config.ini
+        try:
+            config = configparser.ConfigParser()
+            config.read('config.ini', encoding='utf-8')
+            if not config.has_section('Settings'):
+                config.add_section('Settings')
+            config.set('Settings', 'interval_minutes', str(minutes))
+            with open('config.ini', 'w', encoding='utf-8') as f:
+                config.write(f)
+        except Exception:
+            pass
+        # Уведомляем пользователя
+        msg = (f"Interval set to {minutes} min" if self.lang == 'en' else f"Интервал установлен: {minutes} мин")
+        self.notify(msg)
     
     def shutdown(self):
         """Корректное завершение: останавливает цикл и трей, безопасно и идемпотентно"""
@@ -372,21 +416,40 @@ class TrayManager:
         self.icon.run()
     
     def start_timer_thread(self, interval):
-        """Запускает основной таймер в отдельном потоке"""
+        """Запускает основной таймер в отдельном потоке с динамическим интервалом"""
+        with self._lock:
+            self.interval_minutes = interval
+            self._seconds_left = interval * 60
+
         def timer_loop():
-            logging.info(_log('timer_started', interval=interval))
+            logging.info(_log('timer_started', interval=self.interval_minutes))
             while self.running:
-                if not self.paused:
-                    logging.debug(_log('timer_waiting', interval=interval))
-                    time.sleep(interval * 60)
-                    if self.running and not self.paused:
-                        msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
-                        self.idx += 1
-                        logging.info(_log('auto_notification', num=self.idx, msg=msg[:50]))
-                        self.notify(msg)
-                else:
-                    time.sleep(1)  # Короткий сон при паузе
-        
+                if self.paused:
+                    time.sleep(1)
+                    continue
+
+                # Тик раз в секунду, учитывая возможное изменение интервала
+                time.sleep(1)
+                with self._lock:
+                    if self._seconds_left is None:
+                        self._seconds_left = self.interval_minutes * 60
+                    else:
+                        self._seconds_left = max(0, self._seconds_left - 1)
+
+                    seconds_left = self._seconds_left
+                    current_interval = self.interval_minutes
+
+                if seconds_left % 60 == 0:
+                    logging.debug(_log('timer_waiting', interval=current_interval))
+
+                if seconds_left == 0 and self.running and not self.paused:
+                    msg = random.choice(self.messages) if self.mode == 'random' else self.messages[self.idx % len(self.messages)]
+                    self.idx += 1
+                    logging.info(_log('auto_notification', num=self.idx, msg=msg[:50]))
+                    self.notify(msg)
+                    with self._lock:
+                        self._seconds_left = self.interval_minutes * 60
+
         timer_thread = threading.Thread(target=timer_loop, daemon=True)
         timer_thread.start()
         logging.debug(_log('timer_thread_started'))
