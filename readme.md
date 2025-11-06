@@ -9,7 +9,9 @@ Adjustable reminder interval and custom message via config.ini
 
 Native notifications for Windows, Linux, and macOS
 
-System tray integration with pause/test/quit menu
+System tray integration with pause/test/interval/quit menu
+
+Change interval from tray (10/15/20/30/45/60 min), applies instantly and is saved to config.ini
 
 Lightweight and runs in the background
 
@@ -76,6 +78,7 @@ The application will run in the background with a system tray icon. Right-click 
 
 - **Pause/Resume**: Temporarily stop or resume reminders
 - **Check now**: Trigger an immediate reminder
+- **Interval**: Choose a preset interval (10/15/20/30/45/60 min). The new value is applied immediately and saved to `config.ini`.
 - **Exit**: Close the application
 
 You can also stop the application by pressing Ctrl+C in the terminal or using the Exit option in the tray menu.
