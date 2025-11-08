@@ -9,7 +9,7 @@ Adjustable reminder interval and custom message via config.ini.
 
 Native notifications for Windows, Linux, and macOS.
 
-System tray integration with pause/test/interval/quit menu
+System tray integration with pause/test/interval/quit menu.
 
 Change interval from tray (10/15/20/30/45/60 min), applies instantly and is saved to config.ini
 
