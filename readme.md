@@ -13,7 +13,7 @@ System tray integration with pause/test/interval/quit menu.
 
 Change interval from tray (10/15/20/30/45/60 min), applies instantly and is saved to config.ini.
 
-Lightweight and runs in the background
+Lightweight and runs in the background.
 
 Multiple message rotation, including random mode
 
