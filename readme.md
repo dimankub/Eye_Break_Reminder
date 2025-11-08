@@ -15,7 +15,7 @@ Change interval from tray (10/15/20/30/45/60 min), applies instantly and is save
 
 Lightweight and runs in the background.
 
-Multiple message rotation, including random mode
+Multiple message rotation, including random mode.
 
 Built-in localization (English and Russian)
 
