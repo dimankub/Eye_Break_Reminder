@@ -7,7 +7,7 @@ EyeCare helps reduce eye strain by showing desktop notifications to remind you a
 ## ✨ Features
 Adjustable reminder interval and custom message via config.ini.
 
-Native notifications for Windows, Linux, and macOS
+Native notifications for Windows, Linux, and macOS.
 
 System tray integration with pause/test/interval/quit menu
 
