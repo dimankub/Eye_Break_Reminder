@@ -5,7 +5,7 @@ A cross-platform tool that reminds you to take regular breaks for your eyes.
 EyeCare helps reduce eye strain by showing desktop notifications to remind you about the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds.
 
 ## ✨ Features
-Adjustable reminder interval and custom message via config.ini
+Adjustable reminder interval and custom message via config.ini.
 
 Native notifications for Windows, Linux, and macOS
 
