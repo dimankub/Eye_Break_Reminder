@@ -59,7 +59,7 @@ messages =
     Blink a few times and refocus.
 ```
 ## Параметры
-- `interval_minutes` — частота напоминаний, в минутах
+- `interval_minutes` — частота напоминаний, в минутах.
 - `message_mode` — выбор режима сообщений
   - `single` — одно сообщение
   - `random` — случайное сообщение из списка
