@@ -59,7 +59,7 @@ messages =
     Blink a few times and refocus.
 ```
 ## Parameters
-- `interval_minutes`: time between notifications (in minutes)
+- `interval_minutes`: time between notifications (in minutes).
 - `message_mode`: how messages are selected
   - `single` — fixed message
   - `random` — random selection
