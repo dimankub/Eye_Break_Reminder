@@ -60,7 +60,7 @@ messages =
 ```
 ## Parameters
 - `interval_minutes`: time between notifications (in minutes).
-- `message_mode`: how messages are selected
+- `message_mode`: how messages are selected.
   - `single` — fixed message
   - `random` — random selection
   - any other — sequential rotation
