@@ -61,7 +61,7 @@ messages =
 ## Parameters
 - `interval_minutes`: time between notifications (in minutes).
 - `message_mode`: how messages are selected.
-  - `single` — fixed message
+  - `single` — fixed message.
   - `random` — random selection
   - any other — sequential rotation
 - `lang`: language for notifications (`auto`, `en`, or `ru`)
