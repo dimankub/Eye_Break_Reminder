@@ -65,7 +65,7 @@ messages =
   - `random` — random selection.
   - any other — sequential rotation.
 - `lang`: language for notifications (`auto`, `en`, or `ru`).
-  - `auto` detects system language automatically 
+  - `auto` detects system language automatically. 
 
 ## 🚀 Usage
 Start the script:
