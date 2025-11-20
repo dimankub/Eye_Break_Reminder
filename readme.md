@@ -64,7 +64,7 @@ messages =
   - `single` — fixed message.
   - `random` — random selection.
   - any other — sequential rotation.
-- `lang`: language for notifications (`auto`, `en`, or `ru`)
+- `lang`: language for notifications (`auto`, `en`, or `ru`).
   - `auto` detects system language automatically 
 
 ## 🚀 Usage
