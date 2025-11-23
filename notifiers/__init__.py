@@ -76,3 +76,4 @@ def init_notifier(lang: str = 'en') -> Callable[[str], None]:
         logging.warning(_log('unknown_system', system=system))
         return ConsoleNotifier().notify
 
+
