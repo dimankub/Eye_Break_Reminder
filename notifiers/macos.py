@@ -49,4 +49,3 @@ class MacOSNotifier(BaseNotifier):
             logging.debug(_log('notification_sent'))
         except subprocess.CalledProcessError as e:
             logging.error(_log('notify_error', error=e))
-
