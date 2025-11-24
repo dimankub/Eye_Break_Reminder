@@ -92,4 +92,3 @@ class WindowsNotifier(BaseNotifier):
                 logging.debug(_log('notification_sent'))
             except Exception as e:
                 logging.error(_log('notify_error_win10', error=e))
-
