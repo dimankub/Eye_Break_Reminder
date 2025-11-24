@@ -36,4 +36,3 @@ class ConsoleNotifier(BaseNotifier):
         """
         print(f"[EyeCare] {msg}")
         logging.debug(_log('notification_console', msg=msg))
-
