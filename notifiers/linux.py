@@ -49,4 +49,3 @@ class LinuxNotifier(BaseNotifier):
             logging.error(_log('notify_error', error=e))
         except FileNotFoundError:
             logging.error(_log('notify_not_found'))
-
