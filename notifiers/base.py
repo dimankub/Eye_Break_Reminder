@@ -13,4 +13,3 @@ class BaseNotifier(ABC):
             msg: Текст уведомления
         """
         pass
-
