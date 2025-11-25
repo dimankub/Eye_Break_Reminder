@@ -56,8 +56,9 @@ class TrayManager:
         interval_submenu = pystray.Menu(*[make_interval_item(m) for m in preset_intervals])
 
         # Создаем меню трея
+        self.pause_menu_item = pystray.MenuItem(self._pause_label, self.toggle_pause)
         self.menu = pystray.Menu(
-            pystray.MenuItem("Pause" if lang == 'en' else "Пауза", self.toggle_pause),
+            self.pause_menu_item,
             pystray.MenuItem("Check now" if lang == 'en' else "Проверить сейчас", self.check_now),
             pystray.MenuItem("Interval" if lang == 'en' else "Интервал", interval_submenu),
             pystray.Menu.SEPARATOR,
@@ -80,6 +81,18 @@ class TrayManager:
             status = "Resumed" if self.lang == 'en' else "Возобновлено"
         logging.info(log('pause_enabled' if self.paused else 'pause_disabled'))
         self.notify(status)
+        # Обновляем меню, если иконка уже создана
+        if hasattr(self, 'icon') and hasattr(self.icon, 'update_menu'):
+            try:
+                self.icon.update_menu()
+            except Exception:
+                logging.debug("Не удалось обновить меню трея после переключения паузы")
+
+    def _pause_label(self, item):
+        """Возвращает актуальный текст для пункта паузы"""
+        if self.lang == 'en':
+            return "Resume" if self.paused else "Pause"
+        return "Возобновить" if self.paused else "Пауза"
     
     def check_now(self, icon=None, item=None):
         """Показывает уведомление немедленно"""
