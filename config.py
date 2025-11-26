@@ -16,10 +16,22 @@ LOG_MESSAGES = {
     'ru': {
         'config_created': 'Создание нового конфигурационного файла: {filename}',
         'config_loaded_debug': 'Загружена конфигурация: интервал={interval} мин, режим={mode}, язык={lang}, сообщений={count}',
+        'interval_invalid': 'Некорректное значение interval_minutes: {interval}. Используется значение по умолчанию: {default}',
+        'interval_too_large': 'Слишком большой интервал: {interval} мин. Ограничение: {max_value} мин',
+        'interval_read_error': 'Ошибка чтения interval_minutes: {error}. Используется значение по умолчанию: {default}',
+        'mode_unknown': 'Неизвестное значение message_mode: "{mode}". Допустимые режимы: {valid}. Используется режим "sequential"',
+        'lang_unknown': 'Неизвестное значение lang: "{lang}". Допустимые значения: {valid}. Используется "{fallback}"',
+        'save_interval_error': 'Ошибка сохранения интервала в конфиг: {error}',
     },
     'en': {
         'config_created': 'Creating new configuration file: {filename}',
         'config_loaded_debug': 'Configuration loaded: interval={interval} min, mode={mode}, language={lang}, messages={count}',
+        'interval_invalid': 'Invalid interval_minutes value: {interval}. Using default: {default}',
+        'interval_too_large': 'Interval too large: {interval} minutes. Capping at {max_value} minutes',
+        'interval_read_error': 'Error reading interval_minutes: {error}. Using default: {default}',
+        'mode_unknown': 'Unknown message_mode "{mode}". Valid modes: {valid}. Using "sequential"',
+        'lang_unknown': 'Unknown lang "{lang}". Valid values: {valid}. Using "{fallback}"',
+        'save_interval_error': 'Error saving interval to config: {error}',
     }
 }
 
@@ -70,9 +82,9 @@ def load_config(filename='config.ini', lang_override=None):
     Returns:
         Кортеж (interval, messages, mode, lang)
     """
-    # Устанавливаем язык для логирования в этом модуле
-    if lang_override:
-        set_log_language(lang_override)
+    # Устанавливаем язык для логирования в этом модуле (на основе конфига/системы)
+    resolved_lang_for_logs = get_language(lang_override=lang_override, filename=filename)
+    set_log_language(resolved_lang_for_logs)
     
     # Автосоздание базового конфига с секциями сообщений
     if not os.path.exists(filename):
@@ -102,13 +114,13 @@ def load_config(filename='config.ini', lang_override=None):
     try:
         interval = config.getint('Settings', 'interval_minutes', fallback=DEFAULT_INTERVAL)
         if interval < MIN_INTERVAL:
-            logging.warning(f"Invalid interval_minutes value: {interval}. Using default: {DEFAULT_INTERVAL}")
+            logging.warning(_log('interval_invalid', interval=interval, default=DEFAULT_INTERVAL))
             interval = DEFAULT_INTERVAL
         if interval > MAX_INTERVAL:  # Максимум 24 часа
-            logging.warning(f"Interval too large: {interval} minutes. Capping at {MAX_INTERVAL} minutes")
+            logging.warning(_log('interval_too_large', interval=interval, max_value=MAX_INTERVAL))
             interval = MAX_INTERVAL
     except (ValueError, TypeError) as e:
-        logging.error(f"Error reading interval_minutes: {e}. Using default: {DEFAULT_INTERVAL}")
+        logging.error(_log('interval_read_error', error=e, default=DEFAULT_INTERVAL))
         interval = DEFAULT_INTERVAL
     
     # Валидация режима сообщений
@@ -116,7 +128,7 @@ def load_config(filename='config.ini', lang_override=None):
     if mode not in VALID_MESSAGE_MODES:
         # Если режим некорректный, но не пустой, используем его как 'sequential'
         if mode:
-            logging.warning(f"Unknown message_mode '{mode}'. Valid modes: {VALID_MESSAGE_MODES}. Using 'sequential'")
+            logging.warning(_log('mode_unknown', mode=mode, valid=VALID_MESSAGE_MODES))
             mode = 'sequential'
         else:
             mode = VALID_MESSAGE_MODES[0]
@@ -124,7 +136,7 @@ def load_config(filename='config.ini', lang_override=None):
     # Валидация языка
     lang_setting = config.get('Settings', 'lang', fallback=SUPPORTED_LANGUAGES[0]).strip().lower()
     if lang_setting not in SUPPORTED_LANGUAGES:
-        logging.warning(f"Unknown lang '{lang_setting}'. Valid values: {SUPPORTED_LANGUAGES}. Using '{SUPPORTED_LANGUAGES[0]}'")
+        logging.warning(_log('lang_unknown', lang=lang_setting, valid=SUPPORTED_LANGUAGES, fallback=SUPPORTED_LANGUAGES[0]))
         lang_setting = SUPPORTED_LANGUAGES[0]
 
     # Выбор языка: аргумент > конфиг > язык системы
@@ -170,5 +182,5 @@ def save_interval(interval_minutes: int, filename='config.ini'):
         with open(filename, 'w', encoding='utf-8') as f:
             config.write(f)
     except Exception as e:
-        logging.error(f"Error saving interval to config: {e}")
+        logging.error(_log('save_interval_error', error=e))
 
