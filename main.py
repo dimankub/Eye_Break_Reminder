@@ -73,6 +73,54 @@ class TrayManager:
             self.menu
         )
     
+    def _format_time_left(self, seconds):
+        """Форматирует оставшееся время в читаемый вид"""
+        if seconds is None:
+            return ""
+        
+        if self.paused:
+            if self.lang == 'en':
+                return "Paused"
+            return "Приостановлено"
+        
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        secs = seconds % 60
+        
+        if hours > 0:
+            if self.lang == 'en':
+                return f"{hours}h {minutes}m {secs}s"
+            return f"{hours}ч {minutes}м {secs}с"
+        elif minutes > 0:
+            if self.lang == 'en':
+                return f"{minutes}m {secs}s"
+            return f"{minutes}м {secs}с"
+        else:
+            if self.lang == 'en':
+                return f"{secs}s"
+            return f"{secs}с"
+    
+    def _update_tooltip(self):
+        """Обновляет tooltip иконки с оставшимся временем"""
+        try:
+            with self._lock:
+                seconds_left = self._seconds_left
+                interval = self.interval_minutes
+            
+            if seconds_left is None or interval is None:
+                tooltip = "EyeCare Reminder"
+            else:
+                time_str = self._format_time_left(seconds_left)
+                if self.lang == 'en':
+                    tooltip = f"EyeCare Reminder\nNext notification in: {time_str}"
+                else:
+                    tooltip = f"EyeCare Reminder\nСледующее уведомление через: {time_str}"
+            
+            if hasattr(self, 'icon') and self.icon is not None:
+                self.icon.title = tooltip
+        except Exception as e:
+            logging.debug(f"Не удалось обновить tooltip: {e}")
+    
     def toggle_pause(self, icon=None, item=None):
         """Переключает состояние паузы"""
         self.paused = not self.paused
@@ -87,6 +135,8 @@ class TrayManager:
                 self.icon.update_menu()
             except Exception:
                 logging.debug("Не удалось обновить меню трея после переключения паузы")
+        # Обновляем tooltip
+        self._update_tooltip()
 
     def _pause_label(self, item):
         """Возвращает актуальный текст для пункта паузы"""
@@ -125,6 +175,8 @@ class TrayManager:
         # Уведомляем пользователя
         msg = (f"Interval set to {minutes} min" if self.lang == 'en' else f"Интервал установлен: {minutes} мин")
         self.notify(msg)
+        # Обновляем tooltip
+        self._update_tooltip()
     
     def shutdown(self):
         """Корректное завершение: останавливает цикл и трей, безопасно и идемпотентно"""
@@ -148,24 +200,29 @@ class TrayManager:
         with self._lock:
             self.interval_minutes = interval
             self._seconds_left = interval * 60
+        # Инициализируем tooltip
+        self._update_tooltip()
 
         def timer_loop():
             logging.info(log('timer_started', interval=self.interval_minutes))
             while self.running:
-                if self.paused:
-                    time.sleep(1)
-                    continue
-
                 # Тик раз в секунду, учитывая возможное изменение интервала
                 time.sleep(1)
+                
                 with self._lock:
                     if self._seconds_left is None:
                         self._seconds_left = self.interval_minutes * 60
-                    else:
+                    elif not self.paused:
                         self._seconds_left = max(0, self._seconds_left - 1)
 
                     seconds_left = self._seconds_left
                     current_interval = self.interval_minutes
+
+                # Обновляем tooltip каждую секунду
+                self._update_tooltip()
+
+                if self.paused:
+                    continue
 
                 if seconds_left % 60 == 0:
                     logging.debug(log('timer_waiting', interval=current_interval))
@@ -177,6 +234,8 @@ class TrayManager:
                     self.notify(msg)
                     with self._lock:
                         self._seconds_left = self.interval_minutes * 60
+                    # Обновляем tooltip после сброса таймера
+                    self._update_tooltip()
 
         timer_thread = threading.Thread(target=timer_loop, daemon=True)
         timer_thread.start()
