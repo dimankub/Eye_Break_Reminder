@@ -167,7 +167,7 @@ def load_config(filename='config.ini', lang_override=None):
 
 def save_interval(interval_minutes: int, filename='config.ini'):
     """
-    Сохраняет интервал в конфигурационный файл
+    Сохраняет интервал в конфигурационный файл.
     
     Args:
         filename: Путь к файлу конфигурации
